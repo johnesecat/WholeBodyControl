@@ -1,9 +1,11 @@
 /**
  * Main Web Game Engine using Three.js & G1 Kinematics
+ * Renders the exact high-fidelity Unitree G1 robot STL meshes from the repository.
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { G1Kinematics } from './kinematics.js';
 
 class MotionBricksGame {
@@ -109,111 +111,134 @@ class MotionBricksGame {
     this.robotGroup = new THREE.Group();
     this.scene.add(this.robotGroup);
 
-    // Materials
+    const stlLoader = new STLLoader();
+
+    // High fidelity materials matching G1 official design
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.4, metalness: 0.8 });
     const silverMat = new THREE.MeshStandardMaterial({ color: 0xc0c6ce, roughness: 0.3, metalness: 0.9 });
-    const accentMat = new THREE.MeshStandardMaterial({ color: 0x76b900, roughness: 0.2, metalness: 0.5, emissive: 0x224400 });
+    const accentMat = new THREE.MeshStandardMaterial({ color: 0x76b900, roughness: 0.2, metalness: 0.5, emissive: 0x112200 });
+
+    const loadMesh = (filename, material, parent, pos = [0, 0, 0], rot = [0, 0, 0]) => {
+      const meshGroup = new THREE.Group();
+      meshGroup.position.set(...pos);
+      meshGroup.rotation.set(...rot);
+      parent.add(meshGroup);
+
+      stlLoader.load(`webgame/assets/stl/${filename}`, (geometry) => {
+        geometry.computeVertexNormals();
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        meshGroup.add(mesh);
+      }, undefined, (err) => {
+        console.warn(`Fallback for STL ${filename}:`, err);
+      });
+
+      return meshGroup;
+    };
 
     // Root / Pelvis
     this.pelvis = new THREE.Group();
-    const pelvisMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.18), darkMat);
-    pelvisMesh.castShadow = true;
-    this.pelvis.add(pelvisMesh);
     this.robotGroup.add(this.pelvis);
+    loadMesh('pelvis.STL', darkMat, this.pelvis);
+    loadMesh('pelvis_contour_link.STL', silverMat, this.pelvis);
 
     // Torso
     this.torso = new THREE.Group();
-    this.torso.position.set(0, 0.22, 0);
-    const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.36, 0.2), silverMat);
-    torsoMesh.castShadow = true;
-    this.torso.add(torsoMesh);
-
-    // Head / Sensor Visor
-    const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.16), darkMat);
-    headMesh.position.set(0, 0.26, 0.02);
-    headMesh.castShadow = true;
-    this.torso.add(headMesh);
-
-    const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.02), accentMat);
-    visorMesh.position.set(0, 0.26, 0.101);
-    this.torso.add(visorMesh);
-
+    this.torso.position.set(-0.0039635, 0, 0.054);
     this.pelvis.add(this.torso);
 
-    // Helper for creating leg hierarchy
+    loadMesh('torso_link.STL', silverMat, this.torso);
+    loadMesh('logo_link.STL', accentMat, this.torso, [0.0039635, 0, -0.054]);
+    loadMesh('head_link.STL', darkMat, this.torso, [0.0039635, 0, -0.054]);
+    loadMesh('waist_support_link.STL', silverMat, this.torso, [0.0039635, 0, -0.054]);
+
+    // Helper for creating leg hierarchy with exact STL meshes
     const createLeg = (isLeft) => {
-      const legGroup = new THREE.Group();
       const side = isLeft ? 1 : -1;
-      legGroup.position.set(0.1 * side, -0.05, 0);
+      const sideName = isLeft ? 'left' : 'right';
 
-      const hipMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.12), darkMat);
-      hipMesh.castShadow = true;
-      legGroup.add(hipMesh);
+      const hipPitchGroup = new THREE.Group();
+      hipPitchGroup.position.set(0, 0.064452 * side, -0.1027);
+      this.pelvis.add(hipPitchGroup);
+      loadMesh(`${sideName}_hip_pitch_link.STL`, darkMat, hipPitchGroup);
 
-      const thigh = new THREE.Group();
-      thigh.position.set(0, -0.05, 0);
-      const thighMesh = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.28, 0.09), silverMat);
-      thighMesh.position.y = -0.12;
-      thighMesh.castShadow = true;
-      thigh.add(thighMesh);
-      legGroup.add(thigh);
+      const hipRollGroup = new THREE.Group();
+      hipRollGroup.position.set(0, 0.052 * side, -0.030465);
+      hipPitchGroup.add(hipRollGroup);
+      loadMesh(`${sideName}_hip_roll_link.STL`, silverMat, hipRollGroup);
 
-      const shin = new THREE.Group();
-      shin.position.set(0, -0.28, 0);
-      const shinMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.08), silverMat);
-      shinMesh.position.y = -0.12;
-      shinMesh.castShadow = true;
-      shin.add(shinMesh);
-      thigh.add(shin);
+      const hipYawGroup = new THREE.Group();
+      hipYawGroup.position.set(0.025001, 0, -0.12412);
+      hipRollGroup.add(hipYawGroup);
+      loadMesh(`${sideName}_hip_yaw_link.STL`, silverMat, hipYawGroup);
 
-      const foot = new THREE.Group();
-      foot.position.set(0, -0.28, 0.02);
-      const footMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.22), darkMat);
-      footMesh.position.set(0, -0.025, 0.04);
-      footMesh.castShadow = true;
-      foot.add(footMesh);
-      shin.add(foot);
+      const kneeGroup = new THREE.Group();
+      kneeGroup.position.set(-0.078273, 0.0021489 * side, -0.17734);
+      hipYawGroup.add(kneeGroup);
+      loadMesh(`${sideName}_knee_link.STL`, silverMat, kneeGroup);
 
-      return { legGroup, thigh, shin, foot };
+      const anklePitchGroup = new THREE.Group();
+      anklePitchGroup.position.set(0, -9.4445e-05 * side, -0.30001);
+      kneeGroup.add(anklePitchGroup);
+      loadMesh(`${sideName}_ankle_pitch_link.STL`, silverMat, anklePitchGroup);
+
+      const ankleRollGroup = new THREE.Group();
+      ankleRollGroup.position.set(0, 0, -0.017558);
+      anklePitchGroup.add(ankleRollGroup);
+      loadMesh(`${sideName}_ankle_roll_link.STL`, darkMat, ankleRollGroup);
+
+      return { hipPitchGroup, hipRollGroup, hipYawGroup, kneeGroup, anklePitchGroup, ankleRollGroup };
     };
 
-    // Helper for creating arm hierarchy
+    // Helper for creating arm hierarchy with exact STL meshes
     const createArm = (isLeft) => {
-      const armGroup = new THREE.Group();
       const side = isLeft ? 1 : -1;
-      armGroup.position.set(0.18 * side, 0.12, 0);
+      const sideName = isLeft ? 'left' : 'right';
 
-      const shoulderMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), accentMat);
-      shoulderMesh.castShadow = true;
-      armGroup.add(shoulderMesh);
+      const shoulderPitchGroup = new THREE.Group();
+      shoulderPitchGroup.position.set(0.0039563, 0.10022 * side, 0.23778);
+      this.torso.add(shoulderPitchGroup);
+      loadMesh(`${sideName}_shoulder_pitch_link.STL`, silverMat, shoulderPitchGroup);
 
-      const upperArm = new THREE.Group();
-      const upperArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.22, 12), silverMat);
-      upperArmMesh.position.y = -0.11;
-      upperArmMesh.castShadow = true;
-      upperArm.add(upperArmMesh);
-      armGroup.add(upperArm);
+      const shoulderRollGroup = new THREE.Group();
+      shoulderRollGroup.position.set(0, 0.038 * side, -0.013831);
+      shoulderPitchGroup.add(shoulderRollGroup);
+      loadMesh(`${sideName}_shoulder_roll_link.STL`, silverMat, shoulderRollGroup);
 
-      const forearm = new THREE.Group();
-      forearm.position.set(0, -0.22, 0);
-      const forearmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.2, 12), darkMat);
-      forearmMesh.position.y = -0.1;
-      forearmMesh.castShadow = true;
-      forearm.add(forearmMesh);
-      upperArm.add(forearm);
+      const shoulderYawGroup = new THREE.Group();
+      shoulderYawGroup.position.set(0, 0.00624 * side, -0.1032);
+      shoulderRollGroup.add(shoulderYawGroup);
+      loadMesh(`${sideName}_shoulder_yaw_link.STL`, silverMat, shoulderYawGroup);
 
-      return { armGroup, upperArm, forearm };
+      const elbowGroup = new THREE.Group();
+      elbowGroup.position.set(0.015783, 0, -0.080518);
+      shoulderYawGroup.add(elbowGroup);
+      loadMesh(`${sideName}_elbow_link.STL`, silverMat, elbowGroup);
+
+      const wristRollGroup = new THREE.Group();
+      wristRollGroup.position.set(0.1, 0.00188791 * side, -0.01);
+      elbowGroup.add(wristRollGroup);
+      loadMesh(`${sideName}_wrist_roll_link.STL`, silverMat, wristRollGroup);
+
+      const wristPitchGroup = new THREE.Group();
+      wristPitchGroup.position.set(0.038, 0, 0);
+      wristRollGroup.add(wristPitchGroup);
+      loadMesh(`${sideName}_wrist_pitch_link.STL`, silverMat, wristPitchGroup);
+
+      const wristYawGroup = new THREE.Group();
+      wristYawGroup.position.set(0.046, 0, 0);
+      wristPitchGroup.add(wristYawGroup);
+      loadMesh(`${sideName}_wrist_yaw_link.STL`, silverMat, wristYawGroup);
+      loadMesh(`${sideName}_rubber_hand.STL`, darkMat, wristYawGroup, [0.0415, 0.003 * side, 0]);
+
+      return { shoulderPitchGroup, shoulderRollGroup, shoulderYawGroup, elbowGroup, wristRollGroup, wristPitchGroup, wristYawGroup };
     };
 
     this.leftLeg = createLeg(true);
     this.rightLeg = createLeg(false);
-    this.pelvis.add(this.leftLeg.legGroup);
-    this.pelvis.add(this.rightLeg.legGroup);
-
     this.leftArm = createArm(true);
     this.rightArm = createArm(false);
-    this.torso.add(this.leftArm.armGroup);
-    this.torso.add(this.rightArm.armGroup);
   }
 
   initControls() {
@@ -326,7 +351,7 @@ class MotionBricksGame {
     // Update Kinematics
     const j = this.kinematics.update(seconds, this.currentStyle, vx, vy, 0);
 
-    // Apply joint angles to Three.js Robot hierarchy
+    // Apply joint angles to STL Robot mesh hierarchy
     this.pelvis.position.y = this.kinematics.rootHeight;
     this.pelvis.rotation.x = this.kinematics.rootPitch;
     this.pelvis.rotation.z = this.kinematics.rootRoll;
@@ -335,28 +360,32 @@ class MotionBricksGame {
     this.torso.rotation.x = j.waist_pitch;
 
     // Left Leg
-    this.leftLeg.legGroup.rotation.x = j.left_hip_pitch;
-    this.leftLeg.legGroup.rotation.z = j.left_hip_roll;
-    this.leftLeg.thigh.rotation.x = j.left_knee * 0.5;
-    this.leftLeg.shin.rotation.x = j.left_knee;
-    this.leftLeg.foot.rotation.x = j.left_ankle_pitch;
+    this.leftLeg.hipPitchGroup.rotation.y = j.left_hip_pitch;
+    this.leftLeg.hipRollGroup.rotation.x = j.left_hip_roll;
+    this.leftLeg.hipYawGroup.rotation.z = j.left_hip_yaw;
+    this.leftLeg.kneeGroup.rotation.y = j.left_knee;
+    this.leftLeg.anklePitchGroup.rotation.y = j.left_ankle_pitch;
+    this.leftLeg.ankleRollGroup.rotation.x = j.left_ankle_roll;
 
     // Right Leg
-    this.rightLeg.legGroup.rotation.x = j.right_hip_pitch;
-    this.rightLeg.legGroup.rotation.z = j.right_hip_roll;
-    this.rightLeg.thigh.rotation.x = j.right_knee * 0.5;
-    this.rightLeg.shin.rotation.x = j.right_knee;
-    this.rightLeg.foot.rotation.x = j.right_ankle_pitch;
+    this.rightLeg.hipPitchGroup.rotation.y = j.right_hip_pitch;
+    this.rightLeg.hipRollGroup.rotation.x = j.right_hip_roll;
+    this.rightLeg.hipYawGroup.rotation.z = j.right_hip_yaw;
+    this.rightLeg.kneeGroup.rotation.y = j.right_knee;
+    this.rightLeg.anklePitchGroup.rotation.y = j.right_ankle_pitch;
+    this.rightLeg.ankleRollGroup.rotation.x = j.right_ankle_roll;
 
     // Left Arm
-    this.leftArm.armGroup.rotation.x = j.left_shoulder_pitch;
-    this.leftArm.armGroup.rotation.z = j.left_shoulder_roll;
-    this.leftArm.forearm.rotation.x = j.left_elbow;
+    this.leftArm.shoulderPitchGroup.rotation.y = j.left_shoulder_pitch;
+    this.leftArm.shoulderRollGroup.rotation.x = j.left_shoulder_roll;
+    this.leftArm.shoulderYawGroup.rotation.z = j.left_shoulder_yaw;
+    this.leftArm.elbowGroup.rotation.y = j.left_elbow;
 
     // Right Arm
-    this.rightArm.armGroup.rotation.x = j.right_shoulder_pitch;
-    this.rightArm.armGroup.rotation.z = j.right_shoulder_roll;
-    this.rightArm.forearm.rotation.x = j.right_elbow;
+    this.rightArm.shoulderPitchGroup.rotation.y = j.right_shoulder_pitch;
+    this.rightArm.shoulderRollGroup.rotation.x = j.right_shoulder_roll;
+    this.rightArm.shoulderYawGroup.rotation.z = j.right_shoulder_yaw;
+    this.rightArm.elbowGroup.rotation.y = j.right_elbow;
 
     // Move character in world space based on direction & speed
     const moveSpeed = (this.currentStyle === 'run' ? 2.5 : 1.2) * 0.016;
