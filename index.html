@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MotionBricks - Web Game Template</title>
+  <link rel="stylesheet" href="webgame/css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- 3D WebGL Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Responsive HUD UI Overlay -->
+  <div id="ui-overlay">
+    <!-- Top Bar Container -->
+    <div class="top-bar">
+      <!-- Header Bar -->
+      <div class="header-panel interactive">
+        <div class="brand">
+          <div>
+            <div class="brand-title">MotionBricks Web Game</div>
+            <div class="brand-subtitle">Unitree G1 Humanoid Real-Time Motion Engine</div>
+          </div>
+        </div>
+        <div id="fps-counter" class="stats-badge">60 FPS</div>
+      </div>
+
+      <!-- Style Selector Bar -->
+      <div class="style-panel interactive">
+        <button class="style-btn active" data-style="walk">🚶 Walk</button>
+        <button class="style-btn" data-style="run">🏃 Run</button>
+        <button class="style-btn" data-style="stealth">🥷 Stealth</button>
+        <button class="style-btn" data-style="crawl">🧗 Crawl</button>
+        <button class="style-btn" data-style="boxing">🥊 Boxing</button>
+        <button class="style-btn" data-style="happy">🕺 Dance</button>
+        <button class="style-btn" data-style="zombie">🧟 Zombie</button>
+        <button class="style-btn" data-style="mocap">🎬 Motion Capture</button>
+      </div>
+    </div>
+
+    <!-- Bottom Controls Container -->
+    <div class="bottom-bar">
+      <!-- Mobile Touch Virtual Joystick -->
+      <div class="mobile-controls interactive">
+        <div id="joystick-base" class="joystick-base">
+          <div id="joystick-stick" class="joystick-stick"></div>
+        </div>
+      </div>
+
+      <!-- Desktop Control Guide -->
+      <div class="desktop-help interactive">
+        <div><span class="key-badge">W</span> <span class="key-badge">A</span> <span class="key-badge">S</span> <span class="key-badge">D</span> Move Character</div>
+        <div style="margin-top: 4px;"><span class="key-badge">Right Click + Drag</span> Rotate Camera</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Game Engine script module -->
+  <script type="module" src="webgame/js/game.js"></script>
+</body>
+</html>
