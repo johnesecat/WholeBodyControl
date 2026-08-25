@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MotionBricks Web Game - Unitree G1 Real-Time Motion Engine</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- 3D Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- Responsive HUD UI Overlay -->
+  <div id="ui-overlay">
+    <!-- Header / Brand & FPS -->
+    <div class="top-bar">
+      <div class="header-panel interactive">
+        <div class="brand">
+          <div class="brand-title">MotionBricks Web Game</div>
+          <div class="brand-subtitle">Unitree G1 Humanoid Real-Time Motion Engine</div>
+        </div>
+        <div id="fps-counter" class="stats-badge">60 FPS</div>
+      </div>
+
+      <!-- Motion Styles Selector -->
+      <div class="style-panel interactive">
+        <button class="style-btn active" data-style="walk">🚶 Walk</button>
+        <button class="style-btn" data-style="run">🏃 Run</button>
+        <button class="style-btn" data-style="stealth">🥷 Stealth</button>
+        <button class="style-btn" data-style="crawl">🧗 Crawl</button>
+        <button class="style-btn" data-style="boxing">🥊 Boxing</button>
+        <button class="style-btn" data-style="happy">🕺 Dance</button>
+        <button class="style-btn" data-style="zombie">🧟 Zombie</button>
+      </div>
+    </div>
+
+    <!-- Bottom Controls & Dynamic Joystick -->
+    <div class="bottom-bar">
+      <div class="mobile-controls interactive">
+        <div id="joystick-base" class="joystick-base">
+          <div id="joystick-stick" class="joystick-stick"></div>
+        </div>
+      </div>
+
+      <div class="desktop-help interactive">
+        <div><span class="key-badge">W</span> <span class="key-badge">A</span> <span class="key-badge">S</span> <span class="key-badge">D</span> Steering / Movement</div>
+        <div style="margin-top: 4px;"><span class="key-badge">Drag / Mouse</span> Camera Orbit</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/game.js"></script>
+</body>
+</html>
