@@ -1,6 +1,6 @@
 /**
- * Main Web Game Engine using Three.js & G1 Kinematics
- * Renders the exact Unitree G1 robot STL meshes with proper URDF axis transforms.
+ * MotionBricks Web Engine - Three.js WebGL Client
+ * Real-time rendering of the Unitree G1 Humanoid Robot with dual WASD / Mobile Touch Joystick support.
  */
 
 import * as THREE from 'three';
@@ -8,19 +8,17 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { G1Kinematics } from './kinematics.js';
 
-class MotionBricksGame {
+class MotionBricksApp {
   constructor() {
     this.container = document.getElementById('canvas-container');
     this.currentStyle = 'walk';
     this.kinematics = new G1Kinematics();
 
-    // Input state
     this.keys = { w: false, a: false, s: false, d: false };
     this.joystickVector = { x: 0, y: 0 };
     this.characterPos = new THREE.Vector3(0, 0, 0);
     this.characterRotation = 0;
 
-    // Performance tracking
     this.frameCount = 0;
     this.lastFpsUpdate = performance.now();
     this.fps = 60;
@@ -28,8 +26,8 @@ class MotionBricksGame {
     this.initScene();
     this.initLighting();
     this.initGround();
-    this.initCharacter();
-    this.initControls();
+    this.initRobot();
+    this.initInputControls();
     this.initUI();
 
     window.addEventListener('resize', () => this.onWindowResize());
@@ -39,7 +37,7 @@ class MotionBricksGame {
   initScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a0e17);
-    this.scene.fog = new THREE.FogExp2(0x0a0e17, 0.035);
+    this.scene.fog = new THREE.FogExp2(0x0a0e17, 0.03);
 
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -49,7 +47,7 @@ class MotionBricksGame {
     );
     this.camera.position.set(0, 1.8, 3.5);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
@@ -65,24 +63,24 @@ class MotionBricksGame {
   }
 
   initLighting() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     this.scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(5, 12, 8);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.camera.near = 0.5;
     dirLight.shadow.camera.far = 25;
-    const d = 8;
+    const d = 6;
     dirLight.shadow.camera.left = -d;
     dirLight.shadow.camera.right = d;
     dirLight.shadow.camera.top = d;
     dirLight.shadow.camera.bottom = -d;
     this.scene.add(dirLight);
 
-    const rimLight = new THREE.PointLight(0x76b900, 2, 10);
+    const rimLight = new THREE.PointLight(0x76b900, 2.5, 10);
     rimLight.position.set(-3, 3, -3);
     this.scene.add(rimLight);
   }
@@ -104,27 +102,24 @@ class MotionBricksGame {
     this.scene.add(ground);
   }
 
-  initCharacter() {
+  initRobot() {
     this.robotGroup = new THREE.Group();
     this.scene.add(this.robotGroup);
 
     const stlLoader = new STLLoader();
 
-    // High fidelity materials
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.4, metalness: 0.8 });
     const silverMat = new THREE.MeshStandardMaterial({ color: 0xc0c6ce, roughness: 0.3, metalness: 0.9 });
     const accentMat = new THREE.MeshStandardMaterial({ color: 0x76b900, roughness: 0.2, metalness: 0.5, emissive: 0x112200 });
 
-    // Function to load STL mesh and apply ROS (Z-up) to WebGL (Y-up) conversion
     const loadMesh = (filename, material, parent, pos = [0, 0, 0], rot = [0, 0, 0]) => {
       const meshGroup = new THREE.Group();
-      meshGroup.position.set(pos[0], pos[2], -pos[1]); // Convert ROS XYZ to WebGL XYZ
+      meshGroup.position.set(pos[0], pos[2], -pos[1]);
       meshGroup.rotation.set(rot[0], rot[2], -rot[1]);
       parent.add(meshGroup);
 
-      stlLoader.load(`webgame/assets/stl/${filename}`, (geometry) => {
+      stlLoader.load(`/assets/stl/${filename}`, (geometry) => {
         geometry.computeVertexNormals();
-        // Rotate geometry from ROS Z-up to WebGL Y-up
         geometry.rotateX(-Math.PI / 2);
         const mesh = new THREE.Mesh(geometry, material);
         mesh.castShadow = true;
@@ -137,7 +132,7 @@ class MotionBricksGame {
       return meshGroup;
     };
 
-    // Root / Pelvis
+    // Pelvis
     this.pelvis = new THREE.Group();
     this.robotGroup.add(this.pelvis);
     loadMesh('pelvis.STL', darkMat, this.pelvis);
@@ -153,7 +148,6 @@ class MotionBricksGame {
     loadMesh('head_link.STL', darkMat, this.torso, [0.0039635, 0, -0.054]);
     loadMesh('waist_support_link.STL', silverMat, this.torso, [0.0039635, 0, -0.054]);
 
-    // Leg helper
     const createLeg = (isLeft) => {
       const side = isLeft ? 1 : -1;
       const sideName = isLeft ? 'left' : 'right';
@@ -191,7 +185,6 @@ class MotionBricksGame {
       return { hipPitchGroup, hipRollGroup, hipYawGroup, kneeGroup, anklePitchGroup, ankleRollGroup };
     };
 
-    // Arm helper
     const createArm = (isLeft) => {
       const side = isLeft ? 1 : -1;
       const sideName = isLeft ? 'left' : 'right';
@@ -241,7 +234,7 @@ class MotionBricksGame {
     this.rightArm = createArm(false);
   }
 
-  initControls() {
+  initInputControls() {
     window.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
       if (this.keys.hasOwnProperty(key)) this.keys[key] = true;
@@ -258,8 +251,7 @@ class MotionBricksGame {
     if (base && stick) {
       let active = false;
       let touchId = null;
-      const baseRect = base.getBoundingClientRect();
-      const maxRadius = baseRect.width / 2;
+      const maxRadius = 50;
 
       const handleTouch = (clientX, clientY) => {
         const rect = base.getBoundingClientRect();
@@ -346,7 +338,6 @@ class MotionBricksGame {
 
     const j = this.kinematics.update(seconds, this.currentStyle, vx, vy, 0);
 
-    // Apply root height and pitch/roll
     this.pelvis.position.y = this.kinematics.rootHeight;
     this.pelvis.rotation.x = this.kinematics.rootPitch;
     this.pelvis.rotation.z = this.kinematics.rootRoll;
@@ -354,7 +345,6 @@ class MotionBricksGame {
     this.torso.rotation.y = j.waist_yaw;
     this.torso.rotation.x = j.waist_pitch;
 
-    // Left Leg Pitch/Roll/Yaw (Three.js Pitch = rotation.z in Z-up converted)
     this.leftLeg.hipPitchGroup.rotation.z = j.left_hip_pitch;
     this.leftLeg.hipRollGroup.rotation.x = j.left_hip_roll;
     this.leftLeg.hipYawGroup.rotation.y = j.left_hip_yaw;
@@ -362,7 +352,6 @@ class MotionBricksGame {
     this.leftLeg.anklePitchGroup.rotation.z = j.left_ankle_pitch;
     this.leftLeg.ankleRollGroup.rotation.x = j.left_ankle_roll;
 
-    // Right Leg
     this.rightLeg.hipPitchGroup.rotation.z = j.right_hip_pitch;
     this.rightLeg.hipRollGroup.rotation.x = j.right_hip_roll;
     this.rightLeg.hipYawGroup.rotation.y = j.right_hip_yaw;
@@ -370,13 +359,11 @@ class MotionBricksGame {
     this.rightLeg.anklePitchGroup.rotation.z = j.right_ankle_pitch;
     this.rightLeg.ankleRollGroup.rotation.x = j.right_ankle_roll;
 
-    // Left Arm
     this.leftArm.shoulderPitchGroup.rotation.z = j.left_shoulder_pitch;
     this.leftArm.shoulderRollGroup.rotation.x = j.left_shoulder_roll;
     this.leftArm.shoulderYawGroup.rotation.y = j.left_shoulder_yaw;
     this.leftArm.elbowGroup.rotation.z = j.left_elbow;
 
-    // Right Arm
     this.rightArm.shoulderPitchGroup.rotation.z = j.right_shoulder_pitch;
     this.rightArm.shoulderRollGroup.rotation.x = j.right_shoulder_roll;
     this.rightArm.shoulderYawGroup.rotation.y = j.right_shoulder_yaw;
@@ -413,5 +400,5 @@ class MotionBricksGame {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  new MotionBricksGame();
+  new MotionBricksApp();
 });
