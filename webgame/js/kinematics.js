@@ -1,7 +1,6 @@
 /**
- * MotionBricks Web Engine Kinematics Controller
- * Supports real-time procedural animation & replay of MotionBricks motion datasets
- * for the Unitree G1 29DOF Humanoid Robot.
+ * MotionBricks Kinematics Controller
+ * Computes exact joint rotation transforms for the Unitree G1 Humanoid Robot.
  */
 
 export class G1Kinematics {
@@ -35,12 +34,10 @@ export class G1Kinematics {
   }
 
   update(t, style, vx, vy, vrot) {
-    // If dataset is available and user selected walk dataset replay
     if (this.motionData && style === 'mocap') {
       const frameIdx = Math.floor(t * this.motionData.fps) % this.motionData.frames;
       const dof = this.motionData.dof[frameIdx];
 
-      // Map 29DOF array to joint state
       this.joints.left_hip_pitch = dof[0];
       this.joints.left_hip_roll = dof[1];
       this.joints.left_hip_yaw = dof[2];
@@ -73,7 +70,6 @@ export class G1Kinematics {
       return this.joints;
     }
 
-    // Procedural Motion Engine
     const isMoving = Math.abs(vx) > 0.05 || Math.abs(vy) > 0.05 || Math.abs(vrot) > 0.05;
     const speed = Math.sqrt(vx * vx + vy * vy);
 

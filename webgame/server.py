@@ -8,29 +8,29 @@ from flask import Flask, send_from_directory, jsonify, request
 from flask_cors import CORS
 import os
 import json
-import glob
-import joblib
 
-app = Flask(__name__, static_folder="../")
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+app = Flask(__name__, static_folder=ROOT_DIR)
 CORS(app)
 
 MOTION_DATA = None
 
 def load_motion():
     global MOTION_DATA
-    motion_path = os.path.join(os.path.dirname(__file__), "assets", "sample_motion.json")
+    motion_path = os.path.join(ROOT_DIR, "webgame", "assets", "sample_motion.json")
     if os.path.exists(motion_path):
         with open(motion_path, "r") as f:
             MOTION_DATA = json.load(f)
-        print("Loaded sample motion dataset into memory.")
+        print("Loaded MotionBricks sample dataset into memory.")
 
 @app.route("/")
 def index():
-    return send_from_directory(os.path.dirname(os.path.dirname(__file__)), "index.html")
+    return send_from_directory(ROOT_DIR, "index.html")
 
 @app.route("/<path:path>")
 def static_files(path):
-    return send_from_directory(os.path.dirname(os.path.dirname(__file__)), path)
+    return send_from_directory(ROOT_DIR, path)
 
 @app.route("/api/motion", methods=["GET"])
 def get_motion():
