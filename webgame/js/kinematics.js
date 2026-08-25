@@ -3,6 +3,7 @@
  * Computes exact joint rotation transforms for the Unitree G1 29DOF Humanoid Robot
  * for all MotionBricks smart primitives (Walk, Run, Stealth, Crawl, Elbow Crawl, Boxing, Dance, Zombie, Gun Walk, Scared, Injured)
  * and MotionBricks dataset replay.
+ * Fully compatible with static web hosting (GitHub Pages / Cloudflare Pages).
  */
 
 export class G1Kinematics {
@@ -25,13 +26,14 @@ export class G1Kinematics {
 
   async loadMotionData() {
     try {
-      const res = await fetch('/api/motion');
+      // Static relative fetch for GitHub Pages & Cloudflare Pages compatibility
+      const res = await fetch('./webgame/assets/sample_motion.json');
       if (res.ok) {
         this.motionData = await res.json();
-        console.log("Loaded MotionBricks dataset successfully!");
+        console.log("Loaded MotionBricks static dataset successfully!");
       }
     } catch (e) {
-      console.warn("Could not fetch MotionBricks backend dataset, falling back to procedural engine.", e);
+      console.warn("Could not fetch MotionBricks static dataset, falling back to procedural engine.", e);
     }
   }
 
@@ -125,7 +127,6 @@ export class G1Kinematics {
     const rPhase = -sinP;
 
     if (style === 'injured') {
-      // Limping gait for injured leg
       this.joints.left_hip_pitch = -lPhase * stride * 1.2 - kneeBend * 0.3;
       this.joints.left_knee = kneeBend + Math.max(0, lPhase) * stride * 1.5;
       this.joints.left_ankle_pitch = -this.joints.left_hip_pitch * 0.5;
@@ -151,7 +152,6 @@ export class G1Kinematics {
       this.joints.right_shoulder_pitch = -0.8 - jabR * 0.5;
       this.joints.right_elbow = 1.6 - jabR * 0.8;
     } else if (style === 'gun') {
-      // Aiming rifle posture
       this.joints.left_shoulder_pitch = -1.2;
       this.joints.left_shoulder_roll = 0.3;
       this.joints.left_elbow = 1.2;
@@ -159,7 +159,6 @@ export class G1Kinematics {
       this.joints.right_shoulder_roll = -0.2;
       this.joints.right_elbow = 1.4;
     } else if (style === 'scared') {
-      // Hands shielding head
       this.joints.left_shoulder_pitch = -1.8;
       this.joints.left_shoulder_roll = 0.5;
       this.joints.left_elbow = 1.8;
